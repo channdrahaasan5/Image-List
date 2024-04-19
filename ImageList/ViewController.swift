@@ -25,26 +25,36 @@ class ViewController: UIViewController {
     }
     
     override func viewWillAppear(_ animated: Bool) {
-       
-        if(UserDefaults.standard.value(forKey: "access_token") != nil) {
-            getPhotos(pageNum: pageNum)
-        } else {
-            loader_activity.startAnimating()
-            APIs.shared.auth(auth_code: authentication_code, vc: self) { res, error in
-                if(res != nil) {
-                    if(res?.access_token != nil) {
-                        UserDefaults.standard.setValue(res?.access_token, forKey: "access_token")
-                        UserDefaults.standard.synchronize()
-                        self.getPhotos(pageNum: self.pageNum)
-                    } else {
-                        APIs.shared.showAPIResAlert(title: "Please check the code and update", msg: "For new code load the given URL. You can find URL in README file.", vc: self)
-                    }
-                } else {
-                   
-                }
-                self.loader_activity.stopAnimating()
-            }
+        let deadlineTime = DispatchTime.now() + .seconds(1)
+        DispatchQueue.main.asyncAfter(deadline: deadlineTime) {
+            self.authenticate()
         }
+    }
+    
+    func authenticate() {
+         if(UserDefaults.standard.value(forKey: "access_token") != nil) {
+             getPhotos(pageNum: pageNum)
+         } else {
+             if(authentication_code.count == 0) {
+                 APIs.shared.showAPIResAlert(title: "Please check the code and update", msg: "For new code load the given URL. You can find URL in README file.", vc: self)
+                 return
+             }
+             loader_activity.startAnimating()
+             APIs.shared.auth(auth_code: authentication_code, vc: self) { res, error in
+                 if(res != nil) {
+                     if(res?.access_token != nil) {
+                         UserDefaults.standard.setValue(res?.access_token, forKey: "access_token")
+                         UserDefaults.standard.synchronize()
+                         self.getPhotos(pageNum: self.pageNum)
+                     } else {
+                         APIs.shared.showAPIResAlert(title: "Please check the code and update", msg: "For new code load the given URL. You can find URL in README file.", vc: self)
+                     }
+                 } else {
+                    
+                 }
+                 self.loader_activity.stopAnimating()
+             }
+         }
     }
     
     func getPhotos(pageNum: Int) {
